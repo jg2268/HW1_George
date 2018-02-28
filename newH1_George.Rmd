@@ -1,0 +1,153 @@
+---
+title: "Homework One for Advanced Regression - Julie George"
+author: "Julie George"                
+date: "2/23/2018" 
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(dplyr)
+library(ggplot2)
+```
+
+##Section 1: Initial Set Up of Data 
+```{r}
+democracy <- read.csv("democracy.csv", stringsAsFactors = FALSE, na.strings=".") 
+```
+
+
+##Section 2: Initial Data Exploration
+```{r}
+#Report summary statistics (means and medians, at least) for all variables.
+summary(democracy)
+
+#Create a histogram for political liberties in which each unique value of the variable is in its own bin.
+hist(democracy$POLLIB)
+
+#Create a histogram for GDP per capita.
+hist(democracy$GDPW)
+
+#Create a histogram for log GDP per-capita. 
+loggdppercap <- log10(democracy$GDPW)
+hist(loggdppercap)
+
+#How is this histogram different than the one for GDP per capita when it was not logged.
+#This histogram of logged GDP per capita is different from the one for GDP per capita as it is. The logged GDP per capita hisotgram is more complex, but allows an individual to see the changes as you move from each data point, instead of just the gradual decreases. The GDP per capita histogram is positively skewed.  
+
+```
+##Section 3: Explore Relationships 
+```{r}
+# Create a scatterplot of political liberties against GDP per capita.
+ggplot(democracy, aes(x=democracy$GDPW, y=democracy$POLLIB)) + geom_point() + labs(title  = "Scatterplot of Political Liberties and GDPW")
+
+# When there is a lot of overlap in a scatter plot it is useful to “jitter” the points (randomly move them up and down). Make the previous plot but jitter the points to mitigate the problem of overplotting. (Only jitter the points vertically). You can use geom_jitter in ggplot2 for this.
+ggplot(democracy, aes(x = (democracy$GDPW), y= democracy$POLLIB)) + 
+  geom_jitter(alpha = .1) +
+  theme_bw() +
+  labs(title  = "Jitter Scatterplot of Political Liberties and GDPW", y = "GDPW", x = "Political   Liberties")
+
+# Create a scatterplot of political liberties against log GDP per capita. Jitter the points. 
+ggplot(democracy, aes(x = log10(democracy$GDPW), y = democracy$POLLIB)) +
+  geom_jitter(alpha = .1) + 
+  theme_bw() + 
+  labs(title = "Jitter Scatterplot of Political Liberties and Log GDP per Capita")
+
+#How is the relationship different than when GDP per capita was not logged.
+#The relationship is different when GDP per capita is logged compared to when GDP is not logged. We see that logged GDPW allows an individual to see the changes more clearly as you move from each data point, instead of just a gradual increase as political liberties go from 1-7.  
+
+#Create a boxplot of GDP per capita for oil producing and non-oil producing nations.
+boxplot(democracy$GDPW~democracy$OIL,data=democracy, main="Boxplot of Oil and GDPW", 
+  	xlab="Non Oil Producing and Oil Producing Countries", ylab="GDPW")
+
+```
+
+
+##Section 4: Transform Data and Analyze
+```{r}
+#Calculate the mean GDP per capita in countries with at least 40 percent Catholics. How does it compare to mean GDP per capita for all countries?
+
+CATHMEAN <- democracy %>% filter(CATH >= 40) %>% select(GDPW) %>% glimpse()
+summary(CATHMEAN)
+summary(democracy %>% select(GDPW))
+#The mean GDP per capita in countries with at least 40 percent catholics is $10295.13. The mean GDP per capita for all countries is $8877. We see that the mean GDP per capita in countries with at least 40 percent catholics is higher compared to the mean GDP per capita for all countries by about $1,418.13. 
+
+#Calculate the average GDP per capita in countries with greater than 60% ethnolinguistic fractionalization, less than 60%, and missing ethnolinguistic fractionalization. Hint: you can calculate this with the dplyr verbs: mutate, group_by and summarise.
+summary(democracy$ELF60) #looking at the data
+
+highethnofracgdpw <- democracy %>% filter(ELF60 > .6) %>% select(GDPW)
+lowethnofracgdpw <- democracy %>% filter(ELF60 < .6) %>% select(GDPW)
+summary(highethnofracgdpw)
+summary(lowethnofracgdpw)
+
+#This is for missing ethnolinguistic fractionalization.
+#I see that there are NAs. I must clean it.    
+library(tidyr)
+mean(democracy$GDPW)
+missingethno_gdpw <- filter(democracy, is.na(ELF60))$GDPW %>% mean(na.rm = TRUE)
+missingethno_gdpw
+
+#The average GDP per capita in countries with greater than 60% ethnolinguistic fractionalization is $3591, in less than 60% it is $11804, and in missing ethnolinguistic fracationalization it is $7767.25. 
+
+#What was the median of the average years of education in 1985 for all countries?
+edtyear <- filter(democracy, democracy$YEAR == "1985") 
+  median(edtyear$EDT, na.rm = TRUE) 
+#The median of the average years of education in 1985 for all countries was 5.625 years. 
+  
+#Which country was (or countries were) closest to the median years of education in 1985 among all countries?  
+democracy %>% 
+  filter(democracy$EDT==5.625 & democracy$YEAR==1985) %>% 
+  glimpse
+#Venezuela is the country that is the median years of education in 1985 among all countries. However, we must look at the countries that are closest to the median, so we code have to arrange the data.  
+# First, order rows BY EDT values from low to high
+edu_sort <- arrange(democracy[democracy$YEAR == 1985,],EDT) 
+# I look at the number of objects
+# since median is the one in the middle, i.e. the 57th in the series, then we look at the countries that are right below and above the median.
+edu_sort[56,]
+edu_sort[57,]
+edu_sort[58,]
+# the 58th is closest country which is El Salvador and 56th is Lesotho. 
+#Lesotho and El Salvador are closest to the median, and that Venezuela is the median.
+
+
+#What was the median of the average years of education in 1985 for democracies?
+edtyeardemoc <- filter(democracy, democracy$YEAR == "1985", democracy$REG == "1" ) 
+  median(edtyeardemoc$EDT, na.rm = TRUE) 
+#The median of the average years of education in 1985 for democracies is 7.805 years. 
+  
+#Which democracy was (or democracies were) closest to the median years of education in 1985 among all democracies?
+democracy %>% 
+  filter(democracy$EDT == 7.805 & democracy$REG== 1 & democracy$YEAR==1985) %>% 
+  glimpse
+#Mauritius is the median, but I must find the countries that are closest to the median, so I wil arrange the data. 
+
+# The democracy closest to the median years of education in 1985 among all democracies
+demo_sort <- arrange(democracy[democracy$REG == 1 & democracy$YEAR == 1985,],EDT)
+str(demo_sort) # I look at the number of objects
+# Let's look at the 22nd and the 24th objects
+demo_sort[22,]
+demo_sort[23,] # the median is 7.805
+demo_sort[24,]
+# the 24th is France
+demo_sort[demo_sort$EDT == 7.91,]
+
+#The democracy that was closest to the median years of education in 1985 among all democracies is France and Greece, and Mauritius is the median.  
+
+#What were the 25th and 75th percentiles of ethnolinguistic fractionalization for new and old countries?
+ethnofracnew <- democracy %>% 
+  filter(democracy$NEWC==1) %>%
+  select(ELF60)
+
+ethnofracold <- democracy %>% 
+  filter(democracy$NEWC==0) %>% 
+  select(ELF60)
+
+quantile(ethnofracnew, na.rm = TRUE)
+#The 25th percentile is 0.42 and the 75th percentile is 0.75 for ethnolinguistic fractionalization for new countries.   
+
+quantile(ethnofracold, na.rm = TRUE)
+#The 25th percentile is 0.06 and the 75th percentile is 0.44 for ethnolinguistic fractionalization for old countries. 
+```
+
