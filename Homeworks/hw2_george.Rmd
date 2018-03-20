@@ -1,0 +1,279 @@
+---
+title: "hw2_george"           
+author: "Julie George"            
+date: "3/8/2018" 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+```{r, message=FALSE}
+library(knitr)  
+library(dplyr)
+library(ggplot2) 
+library(tidyr)
+```
+
+```{r}
+sprintersdata <- read.csv("sprinters.csv", stringsAsFactors = FALSE)
+View(sprintersdata) 
+```
+
+##Section One: Matrix Form 
+In R, Create a matrix X comprised of three columns: a column of ones, a column made of the variable year, and a column made up of the variable women.
+```{r}
+X <- matrix(cbind(1, sprintersdata$year, sprintersdata$women), ncol = 3)
+X
+```
+
+Create a matrix y comprised of a single column, made up of the variable finish.
+```{r}
+Y <- matrix(c(sprintersdata$finish), ncol = 1)
+Y
+```
+
+Compute the following using R’s matrix commands (note that you will need to use the matrix multiplication operator %*%): and report the result of this calculation.
+```{r}
+xprime <- t(X)
+xprime
+
+xprimex <- xprime %*% X
+xprimex
+
+inverse <- solve(xprimex) 
+inverse
+
+finalmatrix <- inverse %*% xprime %*% Y  
+finalmatrix
+```
+The final matrix resulted in producing 34.96003685, -0.01260896, and 1.09281183. 
+
+##Section Two: Fitting A Linear Model
+Using the function lm, run a regression of finish on year and women.
+```{r}
+ymfinish <- lm(finish ~ year + women, data = sprintersdata)
+ymfinish
+summary(ymfinish)
+```
+
+Compare the results the calculation you did in Section 1.
+
+The beta coefficient for year is -0.012609 and the beta coefficient for women is 1.092812. The intercept is 34.960037. In comparison to section 1, these are the same coefficients for each of the variables!
+
+Make a nice plot summarizing this regression. On a single graph, plot the data and the regression line. Make sure the graph is labeled nicely, so that anyone who does not know your variable names could still read it.
+```{r}
+
+ggplot(sprintersdata %>% mutate(new = predict(ymfinish)),
+       aes(x = year, group = women, 
+           color = women)) +
+  geom_point(aes(y = finish)) +
+  geom_line(aes(y = new)) +
+  scale_color_gradient(low="green", high="purple") +
+  theme_bw() +
+  ggtitle("Olympics Times for Men (0) and Women (1) Over the Years") +
+  ylab("Finishing Time") +
+  xlab("Year")
+
+
+```
+
+Rerun the regression, adding an interaction between women and year.
+```{r}
+
+wyfinish <- lm(finish ~ women + year + women:year, data = sprintersdata)
+wyfinish
+summary(wyfinish)
+
+```
+
+Redo the plot with a new fit, one for each level of women.
+```{r} 
+ggplot(sprintersdata %>% mutate(z = predict(wyfinish)),
+       aes(x = year, group = women, 
+           colour = women)) +
+  geom_point(aes(y = finish)) +
+  geom_line(aes(y = z)) +
+  scale_color_gradient(low="blue", high="red") +
+  theme_bw() + 
+  ggtitle("Olympics Times for Men (0) and Women (1) Over the Years (Interaction)") +
+  ylab("Finishing Time") +
+  xlab("Year")
+```
+
+##Section Three: Predicted Values
+Suppose that an Olympics had been held in 2001. Use the predict function to calculate the expected finishing time for men and for women.
+```{r}
+olympics01 <- lm(finish ~ women + year + women:year, data = sprintersdata)
+summary(olympics01)
+
+model <- data.frame(year = 2001, women = 0)
+predict(olympics01, model, interval = 'confidence')
+
+model2 <- data.frame(year = 2001, women = 1) 
+predict(olympics01, model2, interval = 'confidence')
+```
+The predicted finishing time for men is 9.804324 seconds and the predicted finishing time for women is 10.68609 seconds in 2001.
+
+Calculate 95% confidence intervals for the predictions.
+```{r}
+predict(olympics01, model, interval="confidence", level = 0.95)
+predict(olympics01, model2, interval = "confidence", level= 0.95)
+```
+For men, the lower bound is 9.679561 seconds and the upper bound is 9.929086 seconds. For women, the lower bound is is 10.54469 seconds and the upper bound is 10.82748 seconds. 
+
+The authors of the Nature article were interested in predicting the finishing times for the 2156 Olympics. Use predict to do so, for both men and women, and report 95% confidence intervals for your results.
+```{r}
+olympics2156 <- lm(finish ~ women + year + women:year, data = sprintersdata)
+summary(olympics2156)
+
+model3 <- data.frame(year = 2156, women = 0)
+predict(olympics2156, model3, interval = "confidence", level = 0.95)
+
+model4 <- data.frame(year = 2156, women = 1)
+predict(olympics2156, model4, interval = "confidence", level = 0.95)
+```
+For men in 2156, the predicted finishing time is 8.098462 seconds, the lower bound is 7.648238 seconds, and the upper bound is 8.548686 seconds. For women in 2156, the predicted finising time is 8.078666 seconds, the lower bound is 7.404166 seconds, and the upper bound is 8.753165 seconds. 
+
+Do you trust the model’s predictions? Is there reason to trust the 2001 prediction more than the 2156 prediction?
+
+I do not trust the model's predictions, especially with 2156 prediction in comparison to the 2001 prediction. There is reason to trust the 2001 prediction more than 2156 because we can visualize the finishing times for both men and women. 2156 is far beyond the scope of this dataset in terms of predicting finishing times for years. 
+
+Is any assumption of the model being abused or overworked to make this prediction? Hint: Try predicting the finishing times in the year 3000 C.E.
+
+Yes, I believe that the model is being abused or overworked to make this prediction, especially with predicting the finishing times in the year 3000 C.E. These are negative answers for the finishing times for men and women in year 3000 C.E., which is not possible.   
+```{r}
+
+olympics3000 <- lm(finish ~ women + year + women:year, data = sprintersdata)
+summary(olympics3000)
+
+model5 <- data.frame(year = 3000, women = 0)
+predict(olympics3000, model5, interval = "confidence")
+
+model6 <- data.frame(year = 3000, women = 1)
+predict(olympics3000, model6, interval = "confidence") 
+```
+For men in 3000, the predicted finishing time is -1.190232 seconds, the lower bound is -3.496937 seconds, and the upper bound is 1.116472 seconds. For women in 3000, the predicted finishing time is -6.119162 seconds, the lower bound is -9.806223 seconds, and the upper bound is -2.432101 seconds. 
+
+```{r, message=FALSE}
+data("anscombe")
+library("tidyverse")
+anscombe2 <- anscombe %>%
+    mutate(obs = row_number()) %>%
+    gather(variable_dataset, value, - obs) %>%
+    separate(variable_dataset, c("variable", "dataset"), sep = 1L) %>%
+    spread(variable, value) %>%
+    arrange(dataset, obs)
+View(anscombe2)
+```
+
+##Section Four: Looking at Your Data Beyond Summary Statistics
+For each dataset: calculate the mean and standard deviations of x and y, and correlation between x and y.
+```{r}
+anscombe2 %>% 
+  select(x, y) %>% 
+  group_by(anscombe2$dataset) %>% 
+  summarise(meanx = mean(anscombe2$x),
+            standarddeviationx = sd(anscombe2$x),
+            meany = mean(anscombe2$y),
+            standarddeviationy = sd(anscombe2$y),
+            correlationxy = cor(anscombe2$x, anscombe2$y))
+```
+
+Run a linear regression between x and y for each dataset.
+```{r}
+firstdataset <- lm(y ~ x, data = filter(anscombe2, anscombe2$dataset == 1))
+firstdataset
+summary(firstdataset)
+
+seconddataset <- lm(y ~ x, data = filter(anscombe2, anscombe2$dataset == 2))
+seconddataset
+summary(seconddataset)
+
+thirddataset <- lm(y ~ x, data = filter(anscombe2, anscombe2$dataset ==3))
+thirddataset
+summary(thirddataset)
+
+fourthdataset <- lm(y ~ x, data = filter(anscombe2, anscombe2$dataset == 4))
+fourthdataset
+summary(fourthdataset)
+```
+
+How similar do you think that these datasets will look? 
+
+While the linear relationships or fits of these datasets may look very similar, I think that that the datasets overall will look different when graphed, despite the similar coefficients of mean, standard deviation, and correlation between x and y. The datapoints for each of the observations in the four datasets all vary from one another, as well as the distribution of the points. 
+
+Create a scatter plot of each dataset and its linear regression fit. Hint: you can do this easily with facet_wrap.
+```{r}
+
+qplot(anscombe2$x, anscombe2$y, data = anscombe2)+facet_wrap(~dataset)+geom_smooth(method="lm", se=TRUE, fullrange=FALSE, level=0.95)  
+
+```
+
+How do we make sense of these plots?
+
+All of these plots show the same linear relationship. However, the distribution and variance of each of the datasets is different, which is evidenced by the graphs. This teaches us that we need to look beyond the coefficients. 
+
+##Section 5: Research Project
+Describe your data. Do you have it in a form that you can load it into R? What variables does it include? What are their descriptions and types?
+
+Yes, I do have my data in a form that can be loaded into R. The dependent variable is the number of militarized interstate dispute onsets per systemic-year, standardized as the ratio to the number of states in the interstate system, otherwise known as dispute-state ratio. Variables that are included in the regression are the number of nuclear states in the interstate system (discrete) and a count of the years since the number of nuclear states changes, measuring the effect of new nuclear states. Other covariates are the number of democratic states in the interstate system (discrete), gross world product (continous), and the binary variable of unipolarity. The dataset has 23 variables overall. 
+
+```{r}
+library(knitr)
+library(dplyr)
+library(ggplot2) 
+library(tidyr)
+
+ardata <- read.csv("systemleveldata.csv", stringsAsFactors = FALSE)
+View(ardata) 
+
+mean(ardata$disstateratio)
+sd(ardata$disstateratio)
+
+mean(ardata$fatalstateratio)
+sd(ardata$fatalstateratio)
+
+mean(ardata$demonum)
+sd(ardata$demonum)
+
+mean(ardata$numstate)
+sd(ardata$numstate)
+
+mean(ardata$unipolar)
+sd(ardata$unipolar)
+
+mean(ardata$gwp)
+sd(ardata$gwp)
+
+```
+
+Describe, in as precise terms as possible, the distribution of the outcome varaible you plan to use. If you have the data in hand, a histogram would be ideal; if you do not, give a verbal description of what you expect the distribution to look like. Be sure to indicate if the data are continuous or categorical.
+
+The distribution of the outcome variable looks right skewed or positive skewed. The dependent variable is a ratio and is continous. I have also included a ggplot histogram of my dependent variable (disstateratio), including a ggplot histogram of another pertinent variable (fatalstateratio). 
+```{r}
+summary(ardata)
+
+ardata %>% 
+  ggplot(aes(x = disstateratio)) +
+  geom_histogram(bins = 10) +
+  labs(title = "Histogram of Dispute State Ratio", 
+       x = "Dispute State Ratio", 
+       y = "Count")
+
+ardata %>% 
+  ggplot(aes(x = fatalstateratio)) +
+  geom_histogram(bins = 10) +
+  labs(title = "Histogram of Fatal State Ratio", 
+       x = "Fatal State Ratio", 
+       y = "Count")
+
+```
+
+What challenges would your data pose for analysis by least squares regression? Be sure to discuss any potential violations of the assumptions of the Gauss Markov theorem, as well as any other complications or difficulties you see in modeling your data.
+
+Based on the Gauss Markov theorem and its assumptions (no perfect collinearity, x is exogenous, disturbances have the mean of zero, no serial correlation, homskedastic errors, and gaussian error distribution), I will tackle challenges that my data poses for analysis in two ways. First, the number of nuclear states and control variables (the number of democratic states and the gross world product) suffer from multicollinearity. This is not a major problem (because it is not perfect collinearity), but something I will address in my project, by disaggregating gross world product. As for any heteroskedasicity (which most research projects have), I will be sure to plot the residuals against my independent variables. 
+
+In addition, for my project, I will not be using a linear regression as it is not the most appropriate method of showcasing the data and explaining relationships among the various variables.  
+
